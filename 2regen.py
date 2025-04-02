@@ -708,8 +708,19 @@ if st.session_state.execution_started and st.session_state.current_step < st.ses
         else:
             # Process the action
             action = parsed_response.get("action")
-            action_input = parsed_response.get("action_input")
+            action_input = parsed_response.get("action_input", "")
             thought = parsed_response.get("thought", "")
+            
+            # Handle raw responses that couldn't be properly parsed
+            if "error" in parsed_response:
+                # Just display the raw response and continue
+                display_message("assistant", parsed_response.get("raw_response", "Error processing response"))
+                st.session_state.messages.append({"role": "assistant", "content": parsed_response.get("raw_response", "Error processing response")})
+                st.session_state.current_step += 1
+                execution_placeholder.empty()
+                time.sleep(0.5)
+                st.experimental_rerun()
+                continue
             
             # Display thought
             if thought:
