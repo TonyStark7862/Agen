@@ -1481,7 +1481,7 @@ def send_intro_message():
     if not st.session_state.intro_done:
         st.session_state.history.append({
             "role": "agent",
-            "content": """👋 Hello! I'm your ReAct Agent assistant.
+            "content": """Hello! I'm your ReAct Agent assistant.
 
 I can help you with:
 - Answering questions
