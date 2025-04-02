@@ -656,8 +656,8 @@ def agent_step(user_input, prev_observation=None):
     
     # Check for file references in the user input
     file_context = ""
-    if st.session_state.uploaded_files and any(file.name.lower() in user_input.lower() for file in st.session_state.uploaded_files):
-        # User mentioned a file by name - add context
+    if st.session_state.uploaded_files:
+        # Always provide file context if files are uploaded
         file_context = "\nFile context: " + list_files_tool()
     
     # Build tool descriptions
@@ -695,10 +695,6 @@ You can also finish the conversation with:
 
 [User]: {user_input}
 """
-
-    # Set typing indicator
-    st.session_state.typing = True
-    st.experimental_rerun()  # Show typing indicator
     
     # Call the LLM
     response = abc_response(agent_prompt)
@@ -766,6 +762,9 @@ def run_agent_loop(user_input):
     # Reset step counter for new user inputs
     if st.session_state.step_count == 0:
         st.session_state.agent_steps = []
+    
+    # Set typing indicator
+    st.session_state.typing = True
     
     # Main agent loop
     while True:
@@ -863,7 +862,11 @@ def render_thought_process():
     if not st.session_state.show_thoughts or not st.session_state.agent_steps:
         return
     
-    st.markdown("### Agent Thought Process")
+    st.markdown("""
+    <div style="margin-top: 40px; margin-bottom: 10px;">
+        <h3 style="color: #333333; font-weight: 600;">Agent Thought Process</h3>
+    </div>
+    """, unsafe_allow_html=True)
     
     for idx, step in enumerate(st.session_state.agent_steps):
         is_expanded = idx in st.session_state.expanded_thoughts
@@ -871,148 +874,109 @@ def render_thought_process():
         # Create a unique key for this thought container
         key = f"thought_{idx}"
         
-        # Render thought header
-        header_html = f"""
-        <div class="thought-container" id="{key}">
-            <div class="thought-header" onclick="toggleThought('{key}')">
-                <span>Step {idx+1}: {step.get('action', 'Unknown action')}</span>
-                <span>{chevron_down}</span>
-            </div>
-            <div class="thought-body" id="{key}_body" {'class="expanded"' if is_expanded else ''}>
-        """
-        
-        st.markdown(header_html, unsafe_allow_html=True)
-        
-        # Render thought content (only visible when expanded)
-        if is_expanded:
+        # Use Streamlit's native expander instead of JavaScript
+        with st.expander(f"Step {idx+1}: {step.get('action', 'Unknown action')}", expanded=is_expanded):
             st.markdown(f"<div class='thought'><b>Thought:</b> {step.get('thought','')}</div>", unsafe_allow_html=True)
             st.markdown(f"<div class='action'><b>Action:</b> {step.get('action','')} - <i>{step.get('action_input','')}</i></div>", unsafe_allow_html=True)
             st.markdown(f"<div class='observation'><b>Observation:</b> {step.get('observation','')}</div>", unsafe_allow_html=True)
-        
-        # Close the thought body and container
-        st.markdown("</div></div>", unsafe_allow_html=True)
-    
-    # Add JavaScript to handle the toggle
-    st.markdown("""
-    <script>
-    function toggleThought(id) {
-        const body = document.getElementById(id + '_body');
-        if (body.classList.contains('expanded')) {
-            body.classList.remove('expanded');
-        } else {
-            body.classList.add('expanded');
-        }
-    }
-    </script>
-    """, unsafe_allow_html=True)
 
 def render_input_area():
-    """Render the chat input area with file upload button"""
-    # Create the input container
-    st.markdown(
-        """
-        <div class="input-container">
-            <div class="input-box">
-                <label for="file-upload" class="upload-btn">
-                    """+plus_icon+"""
-                </label>
-                <input id="file-upload" class="custom-file-upload" type="file" accept="*/*" onchange="handleFileUpload(this.files)"/>
-                <input id="user-input" class="input-field" type="text" placeholder="Type your message here..." onkeydown="if(event.key==='Enter') document.getElementById('send-button').click();">
-                <button id="send-button" class="send-btn" onclick="sendMessage()">
-                    """+send_icon+"""
-                </button>
-            </div>
-        </div>
+    """Render the chat input area with file upload button using native Streamlit components"""
+    # Create a container with custom styling for the input area
+    st.markdown('<div class="input-container"><div class="input-box">', unsafe_allow_html=True)
+    
+    # Create columns for file upload button, input field, and send button
+    cols = st.columns([1, 8, 1])
+    
+    with cols[0]:
+        # File upload button styled as a plus icon
+        st.markdown(f'<div class="upload-btn">{plus_icon}</div>', unsafe_allow_html=True)
+        uploaded_file = st.file_uploader("Upload", label_visibility="collapsed", key="uploader")
+        if uploaded_file:
+            # Add to uploaded files list if not already present
+            if not any(f.name == uploaded_file.name for f in st.session_state.uploaded_files):
+                st.session_state.uploaded_files.append(uploaded_file)
+                # Set default message about file upload
+                if "user_input" not in st.session_state:
+                    st.session_state.user_input = f"I've uploaded {uploaded_file.name}. Can you help me with this?"
+                st.experimental_rerun()
+    
+    with cols[1]:
+        # Text input field
+        if "user_input" not in st.session_state:
+            st.session_state.user_input = ""
         
-        <script>
-        // Handle file upload
-        function handleFileUpload(files) {
-            const fileInput = document.getElementById('file-upload');
-            if (files.length > 0) {
-                // Show file name in the input field
-                document.getElementById('user-input').value = `I've uploaded ${files[0].name}. Can you help me with this?`;
-                // Submit the form with the file
-                const formData = new FormData();
-                formData.append('file', files[0]);
-                formData.append('action', 'upload_file');
-                
-                // Use fetch API to upload
-                fetch(window.location.href, {
-                    method: 'POST',
-                    body: formData
-                }).then(response => {
-                    console.log('File uploaded');
-                    // Reset the file input
-                    fileInput.value = '';
-                }).catch(error => {
-                    console.error('Error uploading file:', error);
-                });
-            }
-        }
+        # Use a form for the input to handle Enter key press
+        user_input = st.text_input(
+            "Message", 
+            value=st.session_state.user_input,
+            label_visibility="collapsed",
+            placeholder="Type your message here...",
+            key="message_input"
+        )
+    
+    with cols[2]:
+        # Send button styled as a red circle with send icon
+        send_pressed = st.button(
+            "Send", 
+            type="primary",
+            use_container_width=True
+        )
+        # Style the send button as a circle with the send icon
+        st.markdown(
+            f"""
+            <style>
+            div.stButton > button[kind="primary"] {{
+                background-color: #E53935;
+                color: white;
+                border-radius: 50%;
+                width: 40px;
+                height: 40px;
+                padding: 0;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+            }}
+            div.stButton > button[kind="primary"] p {{
+                display: none;
+            }}
+            div.stButton > button[kind="primary"]::before {{
+                content: '';
+                background-image: url('data:image/svg+xml;utf8,{send_icon}');
+                background-position: center;
+                background-repeat: no-repeat;
+                display: inline-block;
+                width: 18px;
+                height: 18px;
+            }}
+            </style>
+            """,
+            unsafe_allow_html=True
+        )
+    
+    st.markdown('</div></div>', unsafe_allow_html=True)
+    
+    # Process form submission
+    if send_pressed and user_input.strip():
+        # Add user message to history
+        st.session_state.history.append({
+            "role": "user",
+            "content": user_input
+        })
         
-        // Handle sending message
-        function sendMessage() {
-            const userInput = document.getElementById('user-input');
-            if (userInput.value.trim() !== '') {
-                // Create a form to submit
-                const form = document.createElement('form');
-                form.method = 'POST';
-                form.style.display = 'none';
-                
-                // Add user input field
-                const inputField = document.createElement('input');
-                inputField.type = 'text';
-                inputField.name = 'user_input';
-                inputField.value = userInput.value;
-                form.appendChild(inputField);
-                
-                // Add action field
-                const actionField = document.createElement('input');
-                actionField.type = 'text';
-                actionField.name = 'action';
-                actionField.value = 'send_message';
-                form.appendChild(actionField);
-                
-                // Append to body and submit
-                document.body.appendChild(form);
-                form.submit();
-                
-                // Clear input
-                userInput.value = '';
-            }
-        }
-        </script>
-        """,
-        unsafe_allow_html=True
-    )
+        # Clear input for next message
+        st.session_state.user_input = ""
+        
+        # Run agent loop with user input
+        run_agent_loop(user_input)
+        
+        # Rerun to update UI
+        st.experimental_rerun()
 
 # --------------------
 # ---- FILE HANDLING ----
 # --------------------
-def handle_file_upload():
-    """Handle file upload from the frontend"""
-    uploaded_file = st.file_uploader("Upload a file", type=None, label_visibility="collapsed", key="file_uploader")
-    
-    if uploaded_file is not None:
-        # Check if this file is already uploaded (prevent duplicates)
-        if not any(f.name == uploaded_file.name for f in st.session_state.uploaded_files):
-            # Add to uploaded files list
-            st.session_state.uploaded_files.append(uploaded_file)
-            
-            # Add system message about file upload
-            file_info = f"File uploaded: {uploaded_file.name} ({len(uploaded_file.getvalue())} bytes)"
-            
-            # Add user message about the file
-            st.session_state.history.append({
-                "role": "user",
-                "content": f"I've uploaded a file named {uploaded_file.name}. Can you help me with this?"
-            })
-            
-            # Run the agent to process the file
-            run_agent_loop(f"The user has uploaded a file named {uploaded_file.name}. Please acknowledge and offer assistance.")
-            
-            # Force a rerun to update the UI
-            st.experimental_rerun()
+# File upload is now handled directly in the render_input_area function
 
 # --------------------
 # ---- AUTO INTRO ----
@@ -1082,36 +1046,15 @@ def main():
     # Render settings in sidebar
     render_settings()
     
-    # Create columns for chat and file upload
-    col1, col2 = st.columns([3, 1])
+    # Main container for chat UI
+    container = st.container()
     
-    with col1:
+    with container:
         # Render chat messages
         render_chat_messages()
         
-        # Render input area (with file upload)
+        # Render input area (with integrated file upload)
         render_input_area()
-        
-        # Handle form submission (done via JavaScript in render_input_area)
-        if st.experimental_get_query_params().get("action") == ["send_message"]:
-            user_input = st.experimental_get_query_params().get("user_input", [""])[0]
-            
-            if user_input:
-                # Add user message to history
-                st.session_state.history.append({
-                    "role": "user",
-                    "content": user_input
-                })
-                
-                # Run agent loop
-                run_agent_loop(user_input)
-                
-                # Rerun to update UI
-                st.experimental_rerun()
-    
-    with col2:
-        # Handle file upload (traditional Streamlit way as backup)
-        handle_file_upload()
     
     # Render thought process after the chat
     render_thought_process()
