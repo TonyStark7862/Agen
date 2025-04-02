@@ -245,6 +245,26 @@ def parse_llm_response(response):
 
 # Function to generate the prompt for the LLM
 def generate_prompt(user_query, conversation_history, step_count, plan):
+    # Get the last step result if there is one
+    last_step_result = None
+    last_step_status = "NONE"
+    if step_count > 1 and len(conversation_history) >= 2:
+        # Look for the most recent tool or assistant message
+        for message in reversed(conversation_history):
+            if message["role"] in ["tool", "assistant"] and message.get("thought") != True:
+                last_step_result = message["content"]
+                last_step_status = "SUCCESS"  # Assume success unless we know otherwise
+                if message["role"] == "tool" and "error" in last_step_result.lower():
+                    last_step_status = "FAILURE"
+                if message["role"] == "tool":
+                    last_step_result = f"Tool ({message.get('tool', 'unknown')}): {last_step_result}"
+                break
+
+    # Determine current, previous and next steps
+    previous_step = plan[step_count-2] if step_count > 1 and step_count-2 < len(plan) else None
+    current_step = plan[step_count-1] if step_count-1 < len(plan) else "Complete the task"
+    next_step = plan[step_count] if step_count < len(plan) else "DONE"
+
     prompt = f"""You are a ReAct (Reasoning and Acting) agent that solves tasks step by step.
     
 AVAILABLE TOOLS:
@@ -263,38 +283,39 @@ You must return a valid JSON object with the following structure:
 
 You are on step {step_count} of a max {st.session_state.max_steps} steps. {st.session_state.max_steps - step_count} steps remain.
 Your goal is to complete the task in as few steps as possible. Be concise but thorough.
-The final step in your plan must be a FINISH step that provides the final answer.
 
-CURRENT PLAN:
+COMPLETE PLAN:
 """
     
-    # Add the plan to the prompt
+    # Add the plan to the prompt with step status
     for i, step in enumerate(plan):
-        status = "COMPLETED" if i < step_count - 1 else "CURRENT" if i == step_count - 1 else "PENDING"
+        if i < step_count - 1:
+            status = "COMPLETED"
+        elif i == step_count - 1:
+            status = "CURRENT"
+        else:
+            status = "PENDING"
         prompt += f"{i+1}. {step} [{status}]\n"
     
-    # Get the last step result if there is one
-    last_step_result = None
-    if step_count > 1 and len(conversation_history) >= 2:
-        # Look for the most recent tool or assistant message
-        for message in reversed(conversation_history):
-            if message["role"] in ["tool", "assistant"] and message.get("thought") != True:
-                last_step_result = message["content"]
-                if message["role"] == "tool":
-                    last_step_result = f"Tool ({message.get('tool', 'unknown')}): {last_step_result}"
-                break
+    # Add context about steps
+    prompt += "\nSTEP CONTEXT:\n"
     
-    # Only include latest context
-    prompt += "\nCONTEXT:\n"
-    prompt += f"User Query: {user_query}\n"
+    if previous_step:
+        prompt += f"Previous Step: {previous_step}\n"
+        prompt += f"Previous Result: {last_step_result}\n"
+        prompt += f"Previous Status: {last_step_status}\n"
     
-    if last_step_result:
-        prompt += f"Last Step Result: {last_step_result}\n"
+    prompt += f"Current Step: {current_step}\n"
     
-    prompt += f"\nCurrent Step ({step_count}): {plan[step_count-1] if step_count-1 < len(plan) else 'Complete the task'}\n"
+    if next_step != "DONE":
+        prompt += f"Next Step: {next_step}\n"
     
-    if step_count < len(plan):
-        prompt += f"Next Step ({step_count+1}): {plan[step_count]}\n"
+    # Basic context
+    prompt += f"\nUser Query: {user_query}\n"
+    
+    # Guide for FINISH step
+    if "FINISH" in current_step.upper():
+        prompt += "\nThis is the FINISH step. Summarize what you've learned and provide a final answer to the user using the Conversation action.\n"
     
     return prompt
 
@@ -379,28 +400,38 @@ if st.session_state.current_plan and not st.session_state.thinking:
 # User input
 user_query = st.chat_input("What can I help you with today?")
 
-# Process user query
+    # Process user query
 if user_query:
+    # Check if this is just a greeting or simple query
+    greeting_patterns = ["hi", "hello", "hey", "greetings", "what's up", "howdy"]
+    is_simple_greeting = any(re.match(f"^{pattern}[!.?]*$", user_query.lower().strip()) for pattern in greeting_patterns)
+    
     # Add user message to chat history
     st.session_state.messages.append({"role": "user", "content": user_query})
     display_message("user", user_query)
     
-    # Reset execution state for new query
-    st.session_state.current_step = 0
-    st.session_state.execution_started = False
-    st.session_state.thoughts = []
-    
-    # Show thinking indicator
-    thinking_placeholder = st.empty()
-    thinking_placeholder.markdown("<div class='thinking'>Agent is typing...</div>", unsafe_allow_html=True)
-    
-    # Generate plan
-    plan_steps = generate_plan(user_query)
-    st.session_state.current_plan = plan_steps
-    
-    # Set execution flag
-    st.session_state.execution_started = True
-    st.rerun()
+    if is_simple_greeting:
+        # Handle simple greeting directly without planning
+        greeting_response = "Hello! How can I assist you today?"
+        display_message("assistant", greeting_response)
+        st.session_state.messages.append({"role": "assistant", "content": greeting_response})
+    else:
+        # Reset execution state for new query
+        st.session_state.current_step = 0
+        st.session_state.execution_started = False
+        st.session_state.thoughts = []
+        
+        # Show thinking indicator
+        thinking_placeholder = st.empty()
+        thinking_placeholder.markdown("<div class='thinking'>Agent is typing...</div>", unsafe_allow_html=True)
+        
+        # Generate plan
+        plan_steps = generate_plan(user_query)
+        st.session_state.current_plan = plan_steps
+        
+        # Set execution flag
+        st.session_state.execution_started = True
+        st.rerun()
 
 # Execute plan if needed
 if st.session_state.execution_started and st.session_state.current_step < st.session_state.max_steps:
