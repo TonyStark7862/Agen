@@ -408,57 +408,14 @@ def load_css():
 def icon(name, color="#333333", size=24):
     """Get SVG icon as HTML"""
     icons = {
-        "send": f"""
-        <svg xmlns="http://www.w3.org/2000/svg" width="{size}" height="{size}" viewBox="0 0 24 24" fill="none" stroke="{color}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <path d="M22 2L11 13"></path>
-            <path d="M22 2L15 22L11 13L2 9L22 2Z"></path>
-        </svg>
-        """,
-        "file": f"""
-        <svg xmlns="http://www.w3.org/2000/svg" width="{size}" height="{size}" viewBox="0 0 24 24" fill="none" stroke="{color}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
-            <polyline points="14 2 14 8 20 8"></polyline>
-        </svg>
-        """,
-        "user": f"""
-        <svg xmlns="http://www.w3.org/2000/svg" width="{size}" height="{size}" viewBox="0 0 24 24" fill="none" stroke="{color}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
-            <circle cx="12" cy="7" r="4"></circle>
-        </svg>
-        """,
-        "bot": f"""
-        <svg xmlns="http://www.w3.org/2000/svg" width="{size}" height="{size}" viewBox="0 0 24 24" fill="none" stroke="{color}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <rect x="3" y="11" width="18" height="10" rx="2"></rect>
-            <circle cx="12" cy="5" r="2"></circle>
-            <path d="M12 7v4"></path>
-            <line x1="8" y1="16" x2="8" y2="16"></line>
-            <line x1="16" y1="16" x2="16" y2="16"></line>
-        </svg>
-        """,
-        "thought": f"""
-        <svg xmlns="http://www.w3.org/2000/svg" width="{size}" height="{size}" viewBox="0 0 24 24" fill="none" stroke="{color}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <circle cx="12" cy="12" r="10"></circle>
-            <path d="M12 16v.01"></path>
-            <path d="M12 8a2 2 0 0 1 2 2c0 .9-.7 1.63-1.58 1.96L12 12.1V13"></path>
-        </svg>
-        """,
-        "reload": f"""
-        <svg xmlns="http://www.w3.org/2000/svg" width="{size}" height="{size}" viewBox="0 0 24 24" fill="none" stroke="{color}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <path d="M21.5 2v6h-6"></path>
-            <path d="M2.5 12c0 5 4 9 9 9 4 0 7.36-2.46 8.59-6M21.5 8A9 9 0 0 0 11.5 3"></path>
-        </svg>
-        """,
-        "settings": f"""
-        <svg xmlns="http://www.w3.org/2000/svg" width="{size}" height="{size}" viewBox="0 0 24 24" fill="none" stroke="{color}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <circle cx="12" cy="12" r="3"></circle>
-            <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
-        </svg>
-        """,
-        "chevron": f"""
-        <svg xmlns="http://www.w3.org/2000/svg" width="{size}" height="{size}" viewBox="0 0 24 24" fill="none" stroke="{color}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <polyline points="9 18 15 12 9 6"></polyline>
-        </svg>
-        """
+        "send": f'<span>➤</span>',
+        "file": f'<span>📄</span>',
+        "user": f'<span>👤</span>',
+        "bot": f'<span>🤖</span>',
+        "thought": f'<span>💭</span>',
+        "reload": f'<span>🔄</span>',
+        "settings": f'<span>⚙️</span>',
+        "chevron": f'<span>▶</span>'
     }
     return icons.get(name, "")
 
@@ -1196,7 +1153,7 @@ def render_message(message):
             f"""
             <div class="message user-message">
                 <div class="message-content user-content">{message['content']}</div>
-                <div class="avatar user-avatar">{icon('user', color='white', size=16)}</div>
+                <div class="avatar user-avatar">👤</div>
             </div>
             """,
             unsafe_allow_html=True
@@ -1205,7 +1162,7 @@ def render_message(message):
         st.markdown(
             f"""
             <div class="message agent-message">
-                <div class="avatar agent-avatar">{icon('bot', color='#E53935', size=16)}</div>
+                <div class="avatar agent-avatar">🤖</div>
                 <div class="message-content agent-content">{message['content']}</div>
             </div>
             """,
@@ -1217,15 +1174,7 @@ def render_typing_indicator():
     st.markdown(
         """
         <div class="message agent-message">
-            <div class="avatar agent-avatar">
-                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#E53935" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                    <rect x="3" y="11" width="18" height="10" rx="2"></rect>
-                    <circle cx="12" cy="5" r="2"></circle>
-                    <path d="M12 7v4"></path>
-                    <line x1="8" y1="16" x2="8" y2="16"></line>
-                    <line x1="16" y1="16" x2="16" y2="16"></line>
-                </svg>
-            </div>
+            <div class="avatar agent-avatar">🤖</div>
             <div class="typing-indicator">
                 <div class="typing-dot"></div>
                 <div class="typing-dot"></div>
@@ -1262,7 +1211,7 @@ def render_thought_process():
         f"""
         <div class="thought-process">
             <div class="thought-title">
-                <span class="thought-icon">{icon('thought', color='#E53935')}</span>
+                <span class="thought-icon">💭</span>
                 Agent Thought Process
             </div>
         </div>
@@ -1334,9 +1283,9 @@ def render_input_area():
             
             # Style the send button as a circle with icon
             st.markdown(
-                f"""
+                """
                 <style>
-                div[data-testid="column"]:nth-child(3) div[data-testid="stButton"] > button {{
+                div[data-testid="column"]:nth-child(3) div[data-testid="stButton"] > button {
                     border-radius: 50%;
                     width: 36px;
                     height: 36px;
@@ -1345,19 +1294,19 @@ def render_input_area():
                     align-items: center;
                     justify-content: center;
                     background-color: #E53935;
-                }}
-                div[data-testid="column"]:nth-child(3) div[data-testid="stButton"] > button p {{
+                }
+                div[data-testid="column"]:nth-child(3) div[data-testid="stButton"] > button p {
                     display: none;
-                }}
-                div[data-testid="column"]:nth-child(3) div[data-testid="stButton"] > button::before {{
-                    content: '';
-                    background-image: url('data:image/svg+xml;utf8,{icon("send", color="white")}');
-                    background-repeat: no-repeat;
-                    background-position: center;
+                }
+                div[data-testid="column"]:nth-child(3) div[data-testid="stButton"] > button::before {
+                    content: "➤";
                     display: block;
                     width: 20px;
                     height: 20px;
-                }}
+                    text-align: center;
+                    line-height: 20px;
+                    color: white;
+                }
                 </style>
                 """,
                 unsafe_allow_html=True
@@ -1435,7 +1384,7 @@ def run_agent(user_input: str):
 def render_settings():
     """Render settings in sidebar"""
     with st.sidebar:
-        st.markdown(f"<div style='text-align:center; margin-bottom:15px;'>{icon('settings', size=20, color='#666')} <b>Agent Settings</b></div>", unsafe_allow_html=True)
+        st.markdown("<div style='text-align:center; margin-bottom:15px;'>⚙️ <b>Agent Settings</b></div>", unsafe_allow_html=True)
         
         # Max steps slider
         st.session_state.max_steps = st.slider(
