@@ -2,144 +2,145 @@ import streamlit as st
 import json
 import re
 import time
-import base64
 from abc_response import abc_response  # Import your LLM function
 
 # Set page configuration
 st.set_page_config(
     page_title="ReAct Agent",
     page_icon="🧠",
-    layout="centered",
+    layout="wide",
     initial_sidebar_state="collapsed",
 )
 
-# Custom CSS for professional UI
+# Custom CSS for professional chat UI
 st.markdown("""
 <style>
 /* Global styles */
+body {
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    background-color: #f9f9f9;
+}
+
 .main {
     background-color: #f9f9f9;
-    padding: 20px;
+    max-width: 1200px;
+    margin: 0 auto;
+}
+
+.block-container {
+    padding-top: 2rem;
+    padding-bottom: 0rem;
 }
 
 /* Header styles */
 h1 {
     color: #1e3a8a;
-    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
     font-weight: 600;
+    text-align: center;
+    margin-bottom: 0.5rem;
 }
 
-/* Message container styles */
+.subtitle {
+    text-align: center;
+    color: #6b7280;
+    margin-bottom: 2rem;
+}
+
+/* Chat container */
 .chat-container {
-    max-width: 800px;
+    max-width: 850px;
     margin: 0 auto;
-}
-
-.chat-message {
-    padding: 1.2rem;
-    border-radius: 0.5rem;
-    margin-bottom: 1rem;
-    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+    padding: 1rem;
+    border-radius: 0.75rem;
+    background-color: #ffffff;
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+    height: calc(100vh - 200px);
     display: flex;
     flex-direction: column;
-    align-items: flex-start;
-    border-left: 4px solid transparent;
 }
 
-.chat-message.user {
-    background-color: #f0f2f6;
-    border-left-color: #1e3a8a;
+.messages-container {
+    flex: 1;
+    overflow-y: auto;
+    padding-right: 0.5rem;
+    margin-bottom: 1rem;
 }
 
-.chat-message.assistant {
-    background-color: #eef4ff;
-    border-left-color: #3b82f6;
-}
-
-.chat-message.tool {
-    background-color: #ecfdf5;
-    border-left-color: #059669;
-}
-
-.chat-message.plan {
-    background-color: #fef3c7;
-    border-left-color: #d97706;
-}
-
-.message-header {
-    width: 100%;
+/* Message bubbles */
+.message {
     display: flex;
-    justify-content: space-between;
-    margin-bottom: 0.5rem;
-    font-weight: 500;
-    color: #4b5563;
+    margin-bottom: 1rem;
 }
 
-.message-content {
-    width: 100%;
+.message.user {
+    justify-content: flex-end;
 }
 
-/* Plan styles */
+.message.assistant {
+    justify-content: flex-start;
+}
+
+.message-bubble {
+    padding: 0.75rem 1rem;
+    border-radius: 1rem;
+    max-width: 80%;
+    box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+}
+
+.user .message-bubble {
+    background-color: #3b82f6;
+    color: white;
+    border-top-right-radius: 0.25rem;
+}
+
+.assistant .message-bubble {
+    background-color: #f3f4f6;
+    color: #1f2937;
+    border-top-left-radius: 0.25rem;
+}
+
+/* Plan collapsible */
 .plan-container {
+    margin: 1rem 0;
+    border-radius: 0.5rem;
     background-color: #fffbeb;
     border: 1px solid #fbbf24;
-    border-radius: 0.5rem;
-    padding: 1rem;
-    margin-bottom: 1rem;
-}
-
-.plan-header {
-    font-weight: 600;
-    color: #92400e;
-    margin-bottom: 0.5rem;
-    display: flex;
-    align-items: center;
-}
-
-.plan-steps {
-    margin-left: 1.5rem;
-}
-
-/* Thought container styles */
-.thought-container {
-    border: 1px solid #e5e7eb;
-    border-radius: 0.5rem;
-    margin-bottom: 1rem;
     overflow: hidden;
 }
 
-.thought-header {
+.plan-header {
     padding: 0.75rem 1rem;
-    background-color: #f3f4f6;
+    background-color: #fef3c7;
     font-weight: 500;
+    color: #92400e;
     cursor: pointer;
     display: flex;
     justify-content: space-between;
     align-items: center;
 }
 
-.thought-content {
+.plan-content {
     padding: 1rem;
-    border-top: 1px solid #e5e7eb;
-    background-color: #ffffff;
+    display: none;
 }
 
-/* Step counter styles */
-.step-counter {
-    background-color: #3b82f6;
-    color: white;
-    border-radius: 50%;
-    width: 24px;
-    height: 24px;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    margin-right: 8px;
-    font-size: 14px;
-    flex-shrink: 0;
+.plan-steps {
+    margin-left: 1.5rem;
+    margin-bottom: 0;
 }
 
-/* Code block styles */
+/* Tool output */
+.tool-output {
+    margin: 0.5rem 0 0.5rem 2.5rem;
+    padding: 0.75rem 1rem;
+    background-color: #ecfdf5;
+    border-left: 3px solid #059669;
+    border-radius: 0.25rem;
+    font-family: 'Courier New', monospace;
+    font-size: 0.875rem;
+}
+
+/* Code formatting */
 .code-block {
     background-color: #1e1e1e;
     color: #d4d4d4;
@@ -151,18 +152,10 @@ h1 {
     overflow-x: auto;
 }
 
-.code-header {
-    display: flex;
-    justify-content: space-between;
-    padding: 0.5rem 1rem;
-    background-color: #252526;
-    border-top-left-radius: 0.5rem;
-    border-top-right-radius: 0.5rem;
-    color: #ffffff;
-    font-size: 0.875rem;
-}
-
 .copy-button {
+    position: absolute;
+    top: 0.5rem;
+    right: 0.5rem;
     background-color: #3b82f6;
     color: white;
     border: none;
@@ -170,49 +163,73 @@ h1 {
     padding: 0.25rem 0.5rem;
     font-size: 0.75rem;
     cursor: pointer;
-    position: absolute;
-    right: 0.5rem;
-    top: 0.5rem;
 }
 
-.copy-button:hover {
-    background-color: #2563eb;
+/* Input area */
+.input-container {
+    display: flex;
+    margin-top: auto;
+    padding-top: 1rem;
+    border-top: 1px solid #e5e7eb;
+}
+
+.stTextInput input {
+    border-radius: 1.5rem;
+    border: 1px solid #d1d5db;
+    padding: 0.75rem 1rem;
+    width: 100%;
+    font-size: 1rem;
+}
+
+.stTextInput input:focus {
+    border-color: #3b82f6;
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.3);
 }
 
 /* Thinking animation */
 .thinking {
+    padding: 0.5rem 1rem;
+    margin-left: 2.5rem;
+    background-color: #f3f4f6;
+    border-radius: 1rem;
     color: #6b7280;
     font-style: italic;
-    display: flex;
+    display: inline-flex;
     align-items: center;
+    max-width: 80%;
 }
 
 .thinking::after {
     content: '';
-    width: 16px;
-    height: 16px;
-    margin-left: 8px;
-    border: 2px solid #d1d5db;
-    border-radius: 50%;
-    border-top-color: #3b82f6;
-    animation: spinner 1s linear infinite;
+    width: 1rem;
+    height: 1rem;
+    margin-left: 0.5rem;
+    background-image: radial-gradient(circle, #3b82f6 3px, transparent 3px);
+    background-size: 0.5rem 0.5rem;
+    animation: thinking 1s infinite;
 }
 
-@keyframes spinner {
-    to {transform: rotate(360deg);}
+@keyframes thinking {
+    0% { opacity: 0.2; }
+    20% { opacity: 1; }
+    100% { opacity: 0.2; }
 }
 
-/* Buttons and inputs */
-.stButton button {
-    background-color: #3b82f6;
-    color: white;
-    border: none;
-    border-radius: 0.25rem;
-    font-weight: 500;
+/* Syntax highlighting */
+.python-code {
+    background-color: #1e1e1e;
+    color: #d4d4d4;
 }
+.python-keyword { color: #569cd6; }
+.python-string { color: #ce9178; }
+.python-comment { color: #6a9955; }
+.python-function { color: #dcdcaa; }
+.python-class { color: #4ec9b0; }
+.python-number { color: #b5cea8; }
 
-.stButton button:hover {
-    background-color: #2563eb;
+/* Sidebar */
+.css-1544g2n {
+    padding-top: 2rem;
 }
 
 /* Hide Streamlit branding */
@@ -225,42 +242,104 @@ h1 {
     line-height: 1.6;
 }
 
-/* Scrollable response content for long outputs */
-.scrollable-content {
-    max-height: 300px;
-    overflow-y: auto;
-    padding-right: 10px;
-    border: 1px solid #e5e7eb;
+/* Final answer formatting */
+.final-answer {
+    background-color: #f0f9ff;
+    border-left: 3px solid #3b82f6;
+    padding: 0.75rem 1rem;
+    margin-top: 0.5rem;
     border-radius: 0.25rem;
 }
 
-/* Syntax highlighting for code blocks */
-.python-code {
-    background-color: #1e1e1e;
-    color: #d4d4d4;
+/* Step indicator */
+.step-indicator {
+    font-size: 0.75rem;
+    color: #6b7280;
+    margin-bottom: 0.25rem;
+    display: block;
 }
-.python-keyword { color: #569cd6; }
-.python-string { color: #ce9178; }
-.python-comment { color: #6a9955; }
-.python-function { color: #dcdcaa; }
-.python-class { color: #4ec9b0; }
-.python-number { color: #b5cea8; }
+
+/* For JavaScript interaction */
+.st-emotion-cache-s1k4sy {
+    margin-top: 0 !important;
+}
+
+.st-emotion-cache-16txtl3 {
+    padding: 0 !important;
+}
+
+.stButton button {
+    background-color: #3b82f6;
+    color: white;
+    border: none;
+    border-radius: 1.5rem;
+    padding: 0.5rem 1.5rem;
+    font-weight: 500;
+}
+
+.stButton button:hover {
+    background-color: #2563eb;
+}
 </style>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Toggle plan visibility
+    const planHeader = document.querySelector('.plan-header');
+    const planContent = document.querySelector('.plan-content');
+    
+    if (planHeader && planContent) {
+        planHeader.addEventListener('click', function() {
+            if (planContent.style.display === 'none' || !planContent.style.display) {
+                planContent.style.display = 'block';
+                this.querySelector('.expand-icon').textContent = '-';
+            } else {
+                planContent.style.display = 'none';
+                this.querySelector('.expand-icon').textContent = '+';
+            }
+        });
+    }
+});
+</script>
 """, unsafe_allow_html=True)
 
-# Function to create collapsible sections
-def create_collapsible(header, content, is_open=False, key=None):
-    # Generate a unique key if none provided
-    if key is None:
-        key = base64.b64encode(f"{header}{time.time()}".encode()).decode()
-    
-    # Create the collapsible UI
-    is_expanded = st.checkbox(header, value=is_open, key=f"expand_{key}")
-    
-    if is_expanded:
-        st.markdown(f'<div class="thought-content">{content}</div>', unsafe_allow_html=True)
-    
-    return is_expanded
+# Initialize session state
+if "messages" not in st.session_state:
+    st.session_state.messages = []
+if "thinking" not in st.session_state:
+    st.session_state.thinking = False
+if "current_step" not in st.session_state:
+    st.session_state.current_step = 0
+if "max_steps" not in st.session_state:
+    st.session_state.max_steps = 10
+if "current_plan" not in st.session_state:
+    st.session_state.current_plan = []
+if "execution_started" not in st.session_state:
+    st.session_state.execution_started = False
+if "final_answers" not in st.session_state:
+    st.session_state.final_answers = []
+if "user_queries" not in st.session_state:
+    st.session_state.user_queries = []
+if "display_messages" not in st.session_state:
+    st.session_state.display_messages = []
+if "is_processing" not in st.session_state:
+    st.session_state.is_processing = False
+
+# Tool functions
+def calculator_tool(expression):
+    """Evaluates a mathematical expression."""
+    try:
+        # Create a safe environment for evaluation
+        safe_dict = {
+            "abs": abs, "round": round, "max": max, "min": min,
+            "sum": sum, "len": len, "pow": pow, "int": int, "float": float
+        }
+        
+        # Safely evaluate the expression
+        result = eval(expression, {"__builtins__": {}}, safe_dict)
+        return f"Result: {result}"
+    except Exception as e:
+        return f"Error: {str(e)}"
 
 # Function to format code with syntax highlighting
 def format_code_block(code, language="python"):
@@ -303,63 +382,6 @@ def format_code_block(code, language="python"):
         <pre><code class="{language}-code">{code}</code></pre>
     </div>
     '''
-
-# Initialize session state
-if "messages" not in st.session_state:
-    st.session_state.messages = []
-if "thinking" not in st.session_state:
-    st.session_state.thinking = False
-if "current_step" not in st.session_state:
-    st.session_state.current_step = 0
-if "max_steps" not in st.session_state:
-    st.session_state.max_steps = 10
-if "current_plan" not in st.session_state:
-    st.session_state.current_plan = []
-if "execution_started" not in st.session_state:
-    st.session_state.execution_started = False
-if "thoughts" not in st.session_state:
-    st.session_state.thoughts = []
-if "answers" not in st.session_state:
-    st.session_state.answers = []
-
-# Tool functions
-def calculator_tool(expression):
-    """Evaluates a mathematical expression."""
-    try:
-        # Create a safe environment for evaluation
-        safe_dict = {
-            "abs": abs, "round": round, "max": max, "min": min,
-            "sum": sum, "len": len, "pow": pow, "int": int, "float": float
-        }
-        
-        # Safely evaluate the expression
-        result = eval(expression, {"__builtins__": {}}, safe_dict)
-        return f"Calculator result: {result}"
-    except Exception as e:
-        return f"Calculator error: {str(e)}"
-
-# Display header
-st.markdown('<h1 style="text-align: center;">ReAct Agent</h1>', unsafe_allow_html=True)
-st.markdown('<p style="text-align: center; color: #6b7280;">Solving tasks with reasoning and step-by-step execution</p>', unsafe_allow_html=True)
-
-# Sidebar for settings
-with st.sidebar:
-    st.header("Settings")
-    st.session_state.max_steps = st.slider("Max steps per query", 3, 15, 10)
-    
-    st.markdown("### Available Tools")
-    st.markdown("- **Calculator**: Perform math calculations")
-    st.markdown("- **Conversation**: Ask for clarification or follow-up")
-    
-    st.markdown("---")
-    if st.button("Clear Conversation"):
-        st.session_state.messages = []
-        st.session_state.current_step = 0
-        st.session_state.current_plan = []
-        st.session_state.execution_started = False
-        st.session_state.thoughts = []
-        st.session_state.answers = []
-        st.rerun()
 
 # Function to detect and format code in responses
 def detect_and_format_code(text):
@@ -469,7 +491,7 @@ Action Input: [input for the action]
 
 You are on step {step_count} of a max {st.session_state.max_steps} steps. Be efficient with your steps.
 Always use the specified format to ensure I can parse your response.
-When the task is complete, use "action": "FINISH" to end the process.
+When the task is complete, use "action": "FINISH" to end the process and provide a complete, comprehensive final answer.
 
 Previous conversation:
 """
@@ -508,179 +530,117 @@ FORMAT: Return a numbered list of steps, with each step on a new line.
     except Exception as e:
         return [f"Error generating plan: {str(e)}", "Proceeding with direct execution"]
 
-# Function to display chat messages with improved formatting
-def display_message(role, content, tool=None, step=None, is_thought=False):
-    # Determine message class
-    message_class = "thought-container" if is_thought else f"chat-message {role}"
+# Display header
+st.markdown('<h1>ReAct Agent</h1>', unsafe_allow_html=True)
+st.markdown('<p class="subtitle">Solving tasks with reasoning and step-by-step execution</p>', unsafe_allow_html=True)
+
+# Sidebar for settings
+with st.sidebar:
+    st.header("Settings")
+    st.session_state.max_steps = st.slider("Max steps per query", 3, 15, 10)
     
-    # Format code in content if present
-    formatted_content = detect_and_format_code(content)
+    st.markdown("### Available Tools")
+    st.markdown("- **Calculator**: Perform math calculations")
+    st.markdown("- **Conversation**: Ask for clarification or follow-up")
     
-    # Determine header text
-    if is_thought:
-        header = f"Reasoning (Step {step})" if step else "Reasoning"
+    st.markdown("---")
+    if st.button("Clear Conversation"):
+        st.session_state.messages = []
+        st.session_state.current_step = 0
+        st.session_state.current_plan = []
+        st.session_state.execution_started = False
+        st.session_state.final_answers = []
+        st.session_state.user_queries = []
+        st.session_state.display_messages = []
+        st.rerun()
+
+# Create chat container
+st.markdown('<div class="chat-container"><div class="messages-container">', unsafe_allow_html=True)
+
+# Display messages in chat format
+for msg in st.session_state.display_messages:
+    role = msg["role"]
+    content = msg["content"]
+    
+    if role == "user":
+        st.markdown(f'<div class="message user"><div class="message-bubble">{content}</div></div>', unsafe_allow_html=True)
+    elif role == "assistant":
+        # Format the content with code highlighting if needed
+        formatted_content = detect_and_format_code(content)
+        st.markdown(f'<div class="message assistant"><div class="message-bubble">{formatted_content}</div></div>', unsafe_allow_html=True)
+    elif role == "plan":
+        # Create collapsible plan
+        plan_steps = ""
+        for step in content:
+            plan_steps += f"<li>{step}</li>"
         
-        # Create collapsible thought
-        with st.container():
-            st.markdown(f"""
-            <div class="thought-container">
-                <div class="thought-header" id="thought-header-{step}">
-                    {header}
-                    <span class="expand-icon">+</span>
-                </div>
-                <div class="thought-content" style="display: none;">
-                    {formatted_content}
-                </div>
+        st.markdown(f"""
+        <div class="plan-container">
+            <div class="plan-header">
+                <span>Execution Plan</span>
+                <span class="expand-icon">+</span>
             </div>
-            """, unsafe_allow_html=True)
-            
-            # Add JavaScript to toggle visibility
-            st.markdown(f"""
-            <script>
-                const header = document.getElementById('thought-header-{step}');
-                if (header) {{
-                    header.addEventListener('click', function() {{
-                        const content = this.nextElementSibling;
-                        if (content.style.display === 'none') {{
-                            content.style.display = 'block';
-                            this.querySelector('.expand-icon').textContent = '-';
-                        }} else {{
-                            content.style.display = 'none';
-                            this.querySelector('.expand-icon').textContent = '+';
-                        }}
-                    }});
-                }}
-            </script>
-            """, unsafe_allow_html=True)
-    else:
-        # For regular messages
-        with st.container():
-            if role == "tool":
-                header = f"Tool ({tool})"
-            elif step is not None:
-                header = f"Step {step}"
-            else:
-                header = "User" if role == "user" else "Assistant"
-            
-            st.markdown(f"""
-            <div class="chat-message {role}">
-                <div class="message-header">
-                    {header}
-                </div>
-                <div class="message-content">
-                    {formatted_content}
-                </div>
+            <div class="plan-content">
+                <ol class="plan-steps">
+                    {plan_steps}
+                </ol>
             </div>
-            """, unsafe_allow_html=True)
-
-# Function to display the plan
-def display_plan(plan_steps):
-    steps_html = ""
-    for i, step in enumerate(plan_steps):
-        steps_html += f"<li>{step}</li>"
-    
-    st.markdown(f"""
-    <div class="plan-container">
-        <div class="plan-header">
-            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-right: 8px;">
-                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
-                <polyline points="14 2 14 8 20 8"></polyline>
-                <line x1="16" y1="13" x2="8" y2="13"></line>
-                <line x1="16" y1="17" x2="8" y2="17"></line>
-                <polyline points="10 9 9 9 8 9"></polyline>
-            </svg>
-            Execution Plan
         </div>
-        <ol class="plan-steps">
-            {steps_html}
-        </ol>
-    </div>
-    """, unsafe_allow_html=True)
+        """, unsafe_allow_html=True)
+    elif role == "tool":
+        st.markdown(f'<div class="tool-output">{content}</div>', unsafe_allow_html=True)
 
-# Display thoughts in a collapsible section
-def display_thoughts():
-    if st.session_state.thoughts:
-        with st.expander("View Reasoning Process", expanded=False):
-            for i, thought in enumerate(st.session_state.thoughts):
-                st.markdown(f"**Step {i+1}**: {thought}")
+# Show thinking animation if processing
+if st.session_state.is_processing:
+    st.markdown('<div class="thinking">Thinking</div>', unsafe_allow_html=True)
 
-# Display all answers as a continuous response
-def display_answers():
-    if st.session_state.answers:
-        for answer in st.session_state.answers:
-            st.markdown(detect_and_format_code(answer), unsafe_allow_html=True)
-
-# Display chat history
-st.markdown('<div class="chat-container">', unsafe_allow_html=True)
-
-# Display messages in organized groups
-user_messages = [msg for msg in st.session_state.messages if msg["role"] == "user"]
-plans = [msg for msg in st.session_state.messages if msg["role"] == "plan"]
-thoughts = []
-answers = []
-
-for message in st.session_state.messages:
-    if message["role"] == "user":
-        display_message("user", message["content"])
-    elif message["role"] == "plan":
-        display_plan(message["content"])
-    elif message["role"] == "assistant" and "Thought" in message["content"]:
-        # Collect thoughts for collapsible section
-        thoughts.append(message["content"].replace("💭 Thought: ", ""))
-        display_message("assistant", message["content"], is_thought=True, step=len(thoughts))
-    elif message["role"] == "tool":
-        display_message("tool", message["content"], tool=message["tool"])
-    elif message["role"] == "assistant":
-        # Regular assistant messages (answers)
-        answers.append(message["content"])
-        display_message("assistant", message["content"])
-
+# Close messages container
 st.markdown('</div>', unsafe_allow_html=True)
 
 # User input
-user_query = st.chat_input("What can I help you with today?")
+user_query = st.text_input("", placeholder="What can I help you with today?", key="user_input")
+
+# Add a "Send" button
+send_button = st.button("Send")
 
 # Process user query
-if user_query:
-    # Add user message to chat history
+if user_query and send_button:
+    # Add user message to display messages
+    st.session_state.display_messages.append({"role": "user", "content": user_query})
+    st.session_state.user_queries.append(user_query)
+    
+    # Add to internal message history
     st.session_state.messages.append({"role": "user", "content": user_query})
-    display_message("user", user_query)
     
     # Reset execution state for new query
     st.session_state.current_step = 0
     st.session_state.execution_started = False
     st.session_state.current_plan = []
-    st.session_state.thoughts = []
-    st.session_state.answers = []
+    st.session_state.is_processing = True
     
-    # Show thinking indicator
-    thinking_placeholder = st.empty()
-    thinking_placeholder.markdown('<div class="thinking">Generating plan...</div>', unsafe_allow_html=True)
-    
-    # Generate plan
+    # Generate plan (but don't display immediately)
     plan_steps = generate_plan(user_query)
     st.session_state.current_plan = plan_steps
     
-    # Add plan to chat history
+    # Add plan to internal message history (not display messages)
     st.session_state.messages.append({"role": "plan", "content": plan_steps})
-    
-    # Display plan
-    thinking_placeholder.empty()
-    display_plan(plan_steps)
     
     # Set execution flag
     st.session_state.execution_started = True
-    st.experimental_rerun()
+    
+    # Clear input
+    st.session_state.user_input = ""
+    
+    # Rerun to update UI
+    st.rerun()
 
-# Execute plan if needed
+# Execute plan if needed (but don't show intermediate steps)
 if st.session_state.execution_started and st.session_state.current_step < st.session_state.max_steps:
-    # Show thinking indicator for execution
-    execution_placeholder = st.empty()
-    execution_placeholder.markdown(f'<div class="thinking">Executing step {st.session_state.current_step + 1}...</div>', unsafe_allow_html=True)
+    st.session_state.is_processing = True
     
     # Generate prompt and get LLM response
     prompt = generate_prompt(
-        user_query=st.session_state.messages[0]["content"] if len(st.session_state.messages) > 0 else "",
+        user_query=st.session_state.user_queries[-1],
         conversation_history=st.session_state.messages,
         step_count=st.session_state.current_step + 1
     )
@@ -694,86 +654,80 @@ if st.session_state.execution_started and st.session_state.current_step < st.ses
         
         # Handle error in parsing
         if "error" in parsed_response:
-            st.error(f"Error: {parsed_response['error']}")
-            st.code(parsed_response["raw_response"])
+            # Add error message to display messages
+            error_msg = f"I encountered an error while processing your request. Please try again or rephrase your question."
+            st.session_state.display_messages.append({"role": "assistant", "content": error_msg})
             st.session_state.execution_started = False
+            st.session_state.is_processing = False
         else:
             # Process the action
             action = parsed_response.get("action")
             action_input = parsed_response.get("action_input")
             thought = parsed_response.get("thought", "")
             
-            # Display thought
+            # Store thought in internal messages but don't display
             if thought:
-                # Save thought to session state
-                st.session_state.thoughts.append(thought)
-                
-                # Add to message history
-                thought_message = f"Thought: {thought}"
-                st.session_state.messages.append({"role": "assistant", "content": thought_message})
-                
-                # Display as collapsible
-                display_message("assistant", thought, is_thought=True, step=st.session_state.current_step + 1)
+                st.session_state.messages.append({"role": "assistant", "content": f"Thought: {thought}"})
             
             # Handle different actions
             if action == "Calculator":
                 # Execute calculator
                 result = calculator_tool(action_input)
                 
-                # Display in UI
-                display_message("assistant", f"Using calculator to compute: {action_input}", step=st.session_state.current_step + 1)
-                display_message("tool", result, tool="Calculator")
-                
-                # Add to history
+                # Add to internal history (not display)
                 st.session_state.messages.append({"role": "tool", "tool": "Calculator", "content": result})
             
-            elif action == "Conversation":
-                # Format the response content
-                formatted_content = detect_and_format_code(action_input)
-                
-                # Save to answers
-                st.session_state.answers.append(formatted_content)
-                
-                # Display conversation response
-                display_message("assistant", action_input, step=st.session_state.current_step + 1)
-                
-                # Add to history
+            elif action == "Conversation" and not action == "FINISH":
+                # Only store intermediate conversations in internal history
                 st.session_state.messages.append({"role": "assistant", "content": action_input})
             
             elif action == "FINISH":
                 # Format the final answer
-                formatted_content = detect_and_format_code(action_input)
+                formatted_content = action_input
                 
-                # Save to answers
-                st.session_state.answers.append(formatted_content)
+                # Add to display messages (this is what the user will see)
+                st.session_state.display_messages.append({"role": "assistant", "content": formatted_content})
                 
-                # Display final response
-                display_message("assistant", f"Final Answer: {action_input}", step=st.session_state.current_step + 1)
+                # Add to internal history
+                st.session_state.messages.append({"role": "assistant", "content": formatted_content})
                 
-                # Add to history
-                st.session_state.messages.append({"role": "assistant", "content": f"Final Answer: {action_input}"})
+                # Add plan to display messages (as collapsible)
+                st.session_state.display_messages.append({"role": "plan", "content": st.session_state.current_plan})
                 
                 # End execution
                 st.session_state.execution_started = False
+                st.session_state.is_processing = False
             
             # Increment step counter
             st.session_state.current_step += 1
             
             # Check if max steps reached
             if st.session_state.current_step >= st.session_state.max_steps:
-                display_message("assistant", "Maximum number of steps reached. Stopping execution.", step=st.session_state.current_step)
-                st.session_state.messages.append({"role": "assistant", "content": "Maximum number of steps reached."})
+                # If max steps reached without finishing, show a message and end
+                st.session_state.display_messages.append({
+                    "role": "assistant", 
+                    "content": "I've analyzed your request but couldn't complete it within the step limit. Here's what I've found so far..."
+                })
                 st.session_state.execution_started = False
-            
-            # Clear thinking indicator
-            execution_placeholder.empty()
+                st.session_state.is_processing = False
             
             # Rerun if still executing
             if st.session_state.execution_started:
-                time.sleep(0.5)  # Small delay for better UX
-                st.experimental_rerun()
+                time.sleep(0.1)  # Small delay
+                st.rerun()
+            else:
+                # When execution is finished, rerun one last time to update UI
+                st.rerun()
     
     except Exception as e:
-        st.error(f"Error during execution: {str(e)}")
+        # Handle any errors
+        st.session_state.display_messages.append({
+            "role": "assistant", 
+            "content": f"I encountered an error while processing your request. Please try again or rephrase your question."
+        })
         st.session_state.execution_started = False
-        execution_placeholder.empty()
+        st.session_state.is_processing = False
+        st.rerun()
+
+# Close chat container
+st.markdown('</div>', unsafe_allow_html=True)
