@@ -1024,10 +1024,10 @@ def initialize_chat():
             "role": "agent", 
             "content": """Hello! I'm your React Agent. I can help you with:
 
-• General questions and conversations
-• Mathematical calculations
-• Generating and running Python code
-• Analyzing files you upload
+- General questions and conversations
+- Mathematical calculations  
+- Generating and running Python code
+- Analyzing files you upload
 
 Just type your question or upload a file using the + button below."""
         })
